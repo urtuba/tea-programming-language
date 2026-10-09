@@ -1,8 +1,8 @@
-Executing inc at line 7
-Executing call at line 8
-Executing mul at line 1
-Executing return at line 2
+Executing inc at line 8
 Executing call at line 9
-Executing inc at line 4
-Executing return at line 5
-Executing return at line 10
+Executing mul at line 2
+Executing return at line 3
+Executing call at line 10
+Executing inc at line 5
+Executing return at line 6
+Executing return at line 11
