@@ -1,0 +1,12 @@
+Executing inc at line 1
+Executing call at line 2
+Executing mul at line 5
+Executing call at line 6
+Executing inc at line 9
+Executing call at line 10
+Executing mul at line 13
+Executing return at line 14
+Executing return at line 11
+Executing return at line 7
+Executing return at line 3
+70
