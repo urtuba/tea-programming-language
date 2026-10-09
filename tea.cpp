@@ -99,7 +99,7 @@ void Interpreter::run()
 int Interpreter::step(int address)
 {
     const Statement& statement = statements_[address];
-    std::cout << "Executing " << statement.type << " at line " << address << '\n';
+    std::cerr << "Executing " << statement.type << " at line " << address << '\n';
 
     if (statement.type == "call") {
         callFunction(statement, address);
