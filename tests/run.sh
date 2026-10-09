@@ -5,10 +5,16 @@
 # from inside tests/cases, with the path NAME.tea as its only argument.
 # Optional files next to it:
 #   NAME.args  the arguments to use instead of NAME.tea (may hold several
-#              words, or be empty); it can also name a file that does not exist
+#              words, or be empty); it can also name a file that does not exist.
+#              Standard input is NAME.tea if that file exists, so an empty
+#              NAME.args runs the program on NAME.tea read from stdin.
 #   NAME.out   expected stdout (required)
 #   NAME.code  expected exit status (default 0)
 #   NAME.err   expected stderr (checked only if the file exists)
+#
+# Every case that succeeds (exit status 0) and has no NAME.args is run a
+# second time with NAME.tea on standard input and no arguments. It must give
+# the same stdout and stderr.
 
 bin=${1:?usage: run.sh PROGRAM}
 bin=$(cd "$(dirname "$bin")" && pwd)/$(basename "$bin")
@@ -17,13 +23,16 @@ tmp=$(mktemp -d "${TMPDIR:-/tmp}/tea-test.XXXXXX") || exit 1
 trap 'rm -rf "$tmp"' EXIT
 
 # Compare one run of the program with the expected files of case $1.
-# Arguments after the name are the program's arguments.
+# $2 is the file used as standard input, $3 the label shown in the result,
+# the rest are the program's arguments.
 check() {
     name=$1
-    shift
+    stdin_file=$2
+    label=$3
+    shift 3
     ok=1
 
-    (cd "$dir" && "$bin" "$@" > "$tmp/out" 2> "$tmp/err" < /dev/null)
+    (cd "$dir" && "$bin" "$@" > "$tmp/out" 2> "$tmp/err" < "$stdin_file")
     status=$?
 
     expected_code=0
@@ -45,10 +54,10 @@ check() {
     fi
 
     if [ "$ok" -eq 1 ]; then
-        echo "PASS $name"
+        echo "PASS $label"
         pass=$((pass + 1))
     else
-        echo "FAIL $name"
+        echo "FAIL $label"
         fail=$((fail + 1))
     fi
 }
@@ -62,12 +71,18 @@ for file in "$dir"/*.tea "$dir"/*.args; do
         *.args) [ -f "$dir/$name.tea" ] && continue ;;
     esac
 
+    case_input=/dev/null
+    [ -f "$dir/$name.tea" ] && case_input=$dir/$name.tea
+
     if [ -f "$dir/$name.args" ]; then
         # Unquoted on purpose: the file holds the words to pass.
         # shellcheck disable=SC2046
-        check "$name" $(cat "$dir/$name.args")
+        check "$name" "$case_input" "$name" $(cat "$dir/$name.args")
     else
-        check "$name" "$name.tea"
+        check "$name" /dev/null "$name" "$name.tea"
+        if [ ! -f "$dir/$name.code" ] || [ "$(cat "$dir/$name.code")" -eq 0 ]; then
+            check "$name" "$case_input" "$name (stdin)"
+        fi
     fi
 done
 

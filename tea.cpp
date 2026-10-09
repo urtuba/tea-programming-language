@@ -5,6 +5,7 @@
  *
  * Tea is a tiny language with functions and five variables (a to e) per call.
  * This file is its interpreter: it checks a program, then runs it from main.
+ * The program comes from the file given as argument, or from standard input.
  *
  * The trace ("Executing <statement> at line N") goes to stderr. The result
  * goes to stdout. An error goes to stderr as "error: line N: <problem>" and
@@ -362,20 +363,25 @@ void Interpreter::calculate(const Statement& statement)
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2) {
-        std::cerr << "usage: tea FILE\n";
+    if (argc > 2) {
+        std::cerr << "usage: tea [FILE]\n";
         return 2;
     }
 
-    std::ifstream file(argv[1]);
-    if (!file) {
-        std::cerr << "error: cannot open '" << argv[1] << "'\n";
-        return 1;
+    // Without a file name, the program comes from standard input.
+    std::ifstream file;
+    if (argc == 2) {
+        file.open(argv[1]);
+        if (!file) {
+            std::cerr << "error: cannot open '" << argv[1] << "'\n";
+            return 1;
+        }
     }
+    std::istream& source = (argc == 2) ? static_cast<std::istream&>(file) : std::cin;
 
     try {
         Interpreter interpreter;
-        interpreter.load(file);
+        interpreter.load(source);
         interpreter.run();
     } catch (const TeaError& error) {
         std::cerr << "error: ";
