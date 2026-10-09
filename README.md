@@ -52,7 +52,7 @@ Each Tea program has a <strong>main function</strong> and starts from this funct
 ### Input / Coding with tea
 <div style="background-color: black, color: white">
 
-#### example1.tea
+#### example2.tea
 <pre>
   function main
   inc a 2
@@ -72,7 +72,7 @@ Each Tea program has a <strong>main function</strong> and starts from this funct
   return c
 </pre></div>
 
-### workflow of example1.tea
+### workflow of example2.tea
 
 <em>Lines are 0-indexed</em>
 <table>
@@ -161,7 +161,7 @@ g++ tea.cpp -o tea.exe
 ```
 run:
 ```
-tea.exe example_code
+tea.exe examples/example1.tea
 ```
 ### Notes
 
