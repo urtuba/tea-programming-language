@@ -11,6 +11,7 @@
  * ends the program with exit status 1.
  */
 
+#include <array>
 #include <cerrno>
 #include <climits>
 #include <cstdlib>
@@ -23,15 +24,22 @@
 
 namespace {
 
-// Limits set by the instructor in 2019.
-const int MAX_STATEMENTS = 100;
-const int MAX_DEPTH = 5;  // main plus 4 nested calls
 const int VARIABLE_COUNT = 5;
+
+// Tea has no conditionals, so a recursive function never stops by itself.
+// This limit ends such a program with an error.
+const size_t MAX_CALL_DEPTH = 10000;
 
 // A problem in the program. Line 0 means it does not belong to one line.
 struct TeaError {
     int line;
     std::string message;
+};
+
+// The variables of one call, and where to go when it returns.
+struct Frame {
+    std::array<int, VARIABLE_COUNT> variables{};
+    int callAddress = 0;  // address of the call statement that started it
 };
 
 enum class Op { Inc, Dec, Mul, Div, Function, Call, Return };
@@ -115,15 +123,11 @@ private:
     void finishMain(const Statement& statement);
     void calculate(const Statement& statement);
 
-    Statement statements_[MAX_STATEMENTS];
-    int statementCount_ = 0;
+    std::vector<Statement> statements_;
     int mainAddress_ = 0;
 
-    // One row of variables per active call. Row 0 belongs to main.
-    int variables_[MAX_DEPTH][VARIABLE_COUNT] = {};
-    // Address of the call statement that started each active call.
-    int callAddress_[MAX_DEPTH] = {};
-    int depth_ = 0;
+    // One frame per active call. The first one belongs to main.
+    std::vector<Frame> frames_;
     bool done_ = false;
 };
 
@@ -180,7 +184,7 @@ Statement Interpreter::parse(const std::vector<std::string>& words, int line) co
 
 void Interpreter::checkFunctionEnd(int header) const
 {
-    int last = statementCount_ - 1;
+    int last = static_cast<int>(statements_.size()) - 1;
     if (last == header || statements_[last].op != Op::Return) {
         throw TeaError{statements_[header].line,
                        "function '" + statements_[header].name +
@@ -210,9 +214,6 @@ void Interpreter::load(std::istream& in)
         if (statement.op != Op::Function && header < 0) {
             throw TeaError{line, "statement outside a function"};
         }
-        if (statementCount_ == MAX_STATEMENTS) {
-            throw TeaError{line, "program is longer than 100 statements"};
-        }
 
         if (statement.op == Op::Function) {
             auto known = functions.find(statement.name);
@@ -224,10 +225,10 @@ void Interpreter::load(std::istream& in)
             if (header >= 0) {
                 checkFunctionEnd(header);
             }
-            header = statementCount_;
+            header = static_cast<int>(statements_.size());
             functions[statement.name] = header;
         }
-        statements_[statementCount_++] = statement;
+        statements_.push_back(statement);
     }
 
     if (header >= 0) {
@@ -235,7 +236,7 @@ void Interpreter::load(std::istream& in)
     }
 
     // Every call needs a function to go to.
-    for (int i = 0; i < statementCount_; i++) {
+    for (size_t i = 0; i < statements_.size(); i++) {
         if (statements_[i].op == Op::Call) {
             auto function = functions.find(statements_[i].name);
             if (function == functions.end()) {
@@ -255,6 +256,7 @@ void Interpreter::load(std::istream& in)
 
 void Interpreter::run()
 {
+    frames_.assign(1, Frame());
     int address = mainAddress_ + 1;
     while (!done_) {
         address = step(address);
@@ -271,7 +273,7 @@ int Interpreter::step(int address)
         callFunction(statement, address);
         return statement.target + 1;
     case Op::Return:
-        if (depth_ > 0) {
+        if (frames_.size() > 1) {
             return returnFromFunction(statement);
         }
         finishMain(statement);
@@ -291,35 +293,36 @@ int Interpreter::step(int address)
 // Starts a new call. All its variables are 0 except the one passed in.
 void Interpreter::callFunction(const Statement& statement, int address)
 {
-    if (depth_ + 1 == MAX_DEPTH) {
-        throw TeaError{statement.line, "more than 4 nested calls"};
+    if (frames_.size() > MAX_CALL_DEPTH) {
+        throw TeaError{statement.line, "call depth over 10000"};
     }
-    depth_++;
-    for (int i = 0; i < VARIABLE_COUNT; i++) {
-        variables_[depth_][i] = (i == statement.variable) ? variables_[depth_ - 1][i] : 0;
-    }
-    callAddress_[depth_] = address;
+    Frame frame;
+    frame.variables[statement.variable] = frames_.back().variables[statement.variable];
+    frame.callAddress = address;
+    frames_.push_back(frame);
 }
 
 // Copies the returned variable into the same variable of the caller and
 // returns the address after the call statement.
 int Interpreter::returnFromFunction(const Statement& statement)
 {
-    variables_[depth_ - 1][statement.variable] = variables_[depth_][statement.variable];
-    return callAddress_[depth_--] + 1;
+    Frame callee = frames_.back();
+    frames_.pop_back();
+    frames_.back().variables[statement.variable] = callee.variables[statement.variable];
+    return callee.callAddress + 1;
 }
 
 // "return" in main prints the variable and ends the program.
 void Interpreter::finishMain(const Statement& statement)
 {
-    std::cout << variables_[0][statement.variable] << '\n';
+    std::cout << frames_.front().variables[statement.variable] << '\n';
     done_ = true;
 }
 
 // Runs inc, dec, mul or div on the variables of the current call.
 void Interpreter::calculate(const Statement& statement)
 {
-    int* variables = variables_[depth_];
+    std::array<int, VARIABLE_COUNT>& variables = frames_.back().variables;
     int left = variables[statement.variable];
     int right = statement.operandIsVariable ? variables[statement.operand]
                                             : statement.operand;
