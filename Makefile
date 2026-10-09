@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -Wpedantic -O2
 
 all: tea
 
-tea: tea.cpp runtime.h
+tea: tea.cpp
 	$(CXX) $(CXXFLAGS) -o $@ tea.cpp
 
 test: tea

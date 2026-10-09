@@ -1,181 +1,196 @@
 /*
- *AUTHOR: Samed Kahyaoglu
- *GITHUB: urtuba
+ * AUTHOR: Samed Kahyaoglu
+ * GITHUB: urtuba
+ * Restored: 2026
+ *
+ * Tea is a tiny language with functions and five variables (a to e) per call.
+ * This file is its interpreter: it loads a program and runs it from main.
  */
 
-#define MAX_STATEMENTS 100
-#include "runtime.h"
-#include <iostream>
-#include <fstream>
-#include <string>
 #include <cstdlib>
-using namespace std;
+#include <fstream>
+#include <iostream>
+#include <string>
 
-AddressValue executeStatement( const Statement & statement,
-			       const AddressValue currentAddress,
-			       ScalarValue variables [5],
-			       Stack<ScalarValue> & callStack,
-			       const AddressValue addressOfCalleeIfCall,
-			       bool & isDone )
+namespace {
+
+// Limits set by the instructor in 2019.
+const int MAX_STATEMENTS = 100;
+const int MAX_DEPTH = 5;  // main plus 4 nested calls
+const int VARIABLE_COUNT = 5;
+
+struct Statement {
+    std::string type;  // inc, dec, mul, div, function, call or return
+    std::string arg1;
+    std::string arg2;  // empty for function and return
+};
+
+// Maps the names a to e to 0 to 4. Any other name gives -1.
+int variableIndex(const std::string& name)
 {
-    (void) variables;
-    (void) callStack;
-    (void) isDone;
-    (void) addressOfCalleeIfCall;
-
-		//entry point
-		//cout << variables[0] << " " << variables[1] << " " << variables[2] << " " << variables[3] << " " << variables[4] << " "<< endl;
-
-    cout << "Executing " << statement.type << " at line " << currentAddress /*<< " degree " << callStack.degree*/ << endl;
-
-
-		if (statement.type.compare("call") == 0)
-		{
-			//this part finds the address of calling function by its name
-			AddressValue a = 0;
-				while(true)
-				{
-					if (((callStack.top + a) -> type.compare("function") == 0) && ((callStack.top + a) -> arg1.compare(statement.arg1) == 0)) break;
-					a++;
-				}
-			//then degree increases, it means a b c d e variables are re-arranged for this function
-			callStack.degree ++;
-			//one variable will be transferred to new variables due to arg2
-			if (statement.arg2.compare("a")==0) callStack.variables[callStack.degree][0] = variables[0];
-			else callStack.variables[callStack.degree][0] = 0;
-			if (statement.arg2.compare("b")==0) callStack.variables[callStack.degree][1] = variables[1];
-			else callStack.variables[callStack.degree][1] = 0;
-			if (statement.arg2.compare("c")==0) callStack.variables[callStack.degree][2] = variables[2];
-			else callStack.variables[callStack.degree][2] = 0;
-			if (statement.arg2.compare("d")==0) callStack.variables[callStack.degree][3] = variables[3];
-			else callStack.variables[callStack.degree][3] = 0;
-			if (statement.arg2.compare("e")==0) callStack.variables[callStack.degree][4] = variables[4];
-			else callStack.variables[callStack.degree][4] = 0;
-			//address before passing new function is recorded to array
-			callStack.degreeCalls[callStack.degree] = currentAddress;
-
-			return a + 1;
-		}
-
-		if ((addressOfCalleeIfCall != 0) && (statement.type.compare("return") == 0))
-		{
-			//if function is not main function, return statement goes next statement in parent function
-			//it saves one of its temporary variables into general variables before
-			if (statement.arg1.compare("a") == 0) callStack.variables[callStack.degree - 1][0] = variables[0];
-			if (statement.arg1.compare("b") == 0) callStack.variables[callStack.degree - 1][1] = variables[1];
-			if (statement.arg1.compare("c") == 0) callStack.variables[callStack.degree - 1][2] = variables[2];
-			if (statement.arg1.compare("d") == 0) callStack.variables[callStack.degree - 1][3] = variables[3];
-			if (statement.arg1.compare("e") == 0) callStack.variables[callStack.degree - 1][4] = variables[4];
-
-			callStack.degree --;
-			return addressOfCalleeIfCall + 1;
-		}
-
-		if ((addressOfCalleeIfCall == 0) && (statement.type.compare("return") == 0))
-		{
-			//final situation, if function is not called it is main(first condition) and if statement is return, program finishes its work.
-			if (statement.arg1.compare("a") == 0) cout << variables[0];
-			if (statement.arg1.compare("b") == 0) cout << variables[1];
-			if (statement.arg1.compare("c") == 0) cout << variables[2];
-			if (statement.arg1.compare("d") == 0) cout << variables[3];
-			if (statement.arg1.compare("e") == 0) cout << variables[4];
-			cout << endl;
-			callStack.isDone = true;
-			return 0;
-		}
-
-		if ((statement.type.size() == 3)) //mul,div,inc and dec are all consists of 3 chars.
-		{
-			// finding value of arg2, if it is value itself; typecasting to ScalarValue.
-			ScalarValue arg2;
-			if(statement.arg2.compare("a") == 0) arg2 = variables[0];
-			else if(statement.arg2.compare("b") == 0) arg2 = variables[1];
-			else if(statement.arg2.compare("c") == 0) arg2 = variables[2];
-			else if(statement.arg2.compare("d") == 0) arg2 = variables[3];
-			else if(statement.arg2.compare("e") == 0) arg2 = variables[4];
-			else arg2 = atoi(statement.arg2.c_str());
-
-			//operations with order: inc, dec, mul, div.
-			if (statement.type.compare("inc") == 0) {
-				if (statement.arg1.compare("a") == 0) variables[0] += arg2;
-				if (statement.arg1.compare("b") == 0) variables[1] += arg2;
-				if (statement.arg1.compare("c") == 0) variables[2] += arg2;
-				if (statement.arg1.compare("d") == 0) variables[3] += arg2;
-				if (statement.arg1.compare("e") == 0) variables[4] += arg2;
-			}
-
-			if (statement.type.compare("dec") == 0) {
-				if (statement.arg1.compare("a") == 0) variables[0] -= arg2;
-				if (statement.arg1.compare("b") == 0) variables[1] -= arg2;
-				if (statement.arg1.compare("c") == 0) variables[2] -= arg2;
-				if (statement.arg1.compare("d") == 0) variables[3] -= arg2;
-				if (statement.arg1.compare("e") == 0) variables[4] -= arg2;
-			}
-
-			if (statement.type.compare("mul") == 0) {
-				if (statement.arg1.compare("a") == 0) variables[0] *= arg2;
-				if (statement.arg1.compare("b") == 0) variables[1] *= arg2;
-				if (statement.arg1.compare("c") == 0) variables[2] *= arg2;
-				if (statement.arg1.compare("d") == 0) variables[3] *= arg2;
-				if (statement.arg1.compare("e") == 0) variables[4] *= arg2;
-			}
-
-			if (statement.type.compare("div") == 0) {
-				if (statement.arg1.compare("a") == 0) variables[0] /= arg2;
-				if (statement.arg1.compare("b") == 0) variables[1] /= arg2;
-				if (statement.arg1.compare("c") == 0) variables[2] /= arg2;
-				if (statement.arg1.compare("d") == 0) variables[3] /= arg2;
-				if (statement.arg1.compare("e") == 0) variables[4] /= arg2;
-			}
-		}
-		//except function calls and returns each statement returns next statement
-    return currentAddress + 1;
+    if (name.size() == 1 && name[0] >= 'a' && name[0] <= 'e') {
+        return name[0] - 'a';
+    }
+    return -1;
 }
 
-int main(int argc, char const *argv[]) {
+class Interpreter {
+public:
+    // Reads the statements of a program from a file.
+    void load(const char* path);
 
-	(void) argc;
-	Statement statements[MAX_STATEMENTS];
-	Stack<ScalarValue> callStack =
-	{
-		{{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}},
-		0, statements, {0,0,0,0,0}, 0, false
-	};
-	ifstream myFile(argv[1]);
+    // Runs the program from the statement after "function main".
+    void run();
 
-	int x = 0;
-	string buffer;
-	while (myFile >> buffer) { //this while loop transfers data from file to statements array
-		statements[x].type = buffer;
-		if ((buffer.compare("function") == 0) || (buffer.compare("return") == 0))
-		{//this functions has 1 arg so I should skip arg2 for them.
-			myFile >> buffer;
-			statements[x].arg1 = buffer;
-			statements[x].arg2 = "";
-		} else {
-			myFile >> buffer;
-			statements[x].arg1 = buffer;
-			myFile >> buffer;
-			statements[x].arg2 = buffer;
-		}
-		x++;
-	}
-	myFile.close();
+private:
+    // Executes the statement at the given address and returns the address
+    // of the next one.
+    int step(int address);
 
+    // Returns the address of the "function NAME" statement, or the statement
+    // count if there is none.
+    int findFunction(const std::string& name) const;
 
-	int k = 0; //k detects the address value of main function
-	while (true) {
-		k++;
-		if (statements[k-1].arg1.compare("main") == 0) break; //when i find main function, I can start with it's next statement. so k is 1 after main.
-	}
+    void callFunction(const Statement& statement, int address);
+    int returnFromFunction(const Statement& statement);
+    void finishMain(const Statement& statement);
+    void calculate(const Statement& statement);
 
-	while (!callStack.isDone)
-	{
-		//I used callStack for most of data because I can reach and change call stack parts in every function (because it is passed by reference)
-		//callStack degreeCalls gives me chance to follow nested function connections and their return addressess
-		//cStack.variables[degree] gives each function its variables as a matrix row
-		k = executeStatement(statements[k], k, callStack.variables[callStack.degree], callStack, callStack.degreeCalls[callStack.degree], callStack.isDone);
-	}
+    Statement statements_[MAX_STATEMENTS];
+    int statementCount_ = 0;
 
-	return 0;
+    // One row of variables per active call. Row 0 belongs to main.
+    int variables_[MAX_DEPTH][VARIABLE_COUNT] = {};
+    // Address of the call statement that started each active call.
+    int callAddress_[MAX_DEPTH] = {};
+    int depth_ = 0;
+    bool done_ = false;
+};
+
+void Interpreter::load(const char* path)
+{
+    std::ifstream file(path);
+    std::string word;
+    while (statementCount_ < MAX_STATEMENTS && file >> word) {
+        Statement& statement = statements_[statementCount_++];
+        statement.type = word;
+        // function and return take one argument, the others take two.
+        file >> statement.arg1;
+        if (word != "function" && word != "return") {
+            file >> statement.arg2;
+        }
+    }
+}
+
+void Interpreter::run()
+{
+    // Start after "function main".
+    int address = 0;
+    while (address < statementCount_ && statements_[address].arg1 != "main") {
+        address++;
+    }
+    address++;
+
+    while (!done_ && address < statementCount_) {
+        address = step(address);
+    }
+}
+
+int Interpreter::step(int address)
+{
+    const Statement& statement = statements_[address];
+    std::cout << "Executing " << statement.type << " at line " << address << '\n';
+
+    if (statement.type == "call") {
+        callFunction(statement, address);
+        return findFunction(statement.arg1) + 1;
+    }
+    if (statement.type == "return") {
+        if (depth_ > 0) {
+            return returnFromFunction(statement);
+        }
+        finishMain(statement);
+        return 0;
+    }
+    calculate(statement);
+    return address + 1;
+}
+
+int Interpreter::findFunction(const std::string& name) const
+{
+    int address = 0;
+    while (address < statementCount_ &&
+           !(statements_[address].type == "function" &&
+             statements_[address].arg1 == name)) {
+        address++;
+    }
+    return address;
+}
+
+// Starts a new call. All its variables are 0 except the one passed in.
+void Interpreter::callFunction(const Statement& statement, int address)
+{
+    int passed = variableIndex(statement.arg2);
+    depth_++;
+    for (int i = 0; i < VARIABLE_COUNT; i++) {
+        variables_[depth_][i] = (i == passed) ? variables_[depth_ - 1][i] : 0;
+    }
+    callAddress_[depth_] = address;
+}
+
+// Copies the returned variable into the same variable of the caller and
+// returns the address after the call statement.
+int Interpreter::returnFromFunction(const Statement& statement)
+{
+    int returned = variableIndex(statement.arg1);
+    if (returned >= 0) {
+        variables_[depth_ - 1][returned] = variables_[depth_][returned];
+    }
+    return callAddress_[depth_--] + 1;
+}
+
+// "return" in main prints the variable and ends the program.
+void Interpreter::finishMain(const Statement& statement)
+{
+    int returned = variableIndex(statement.arg1);
+    if (returned >= 0) {
+        std::cout << variables_[0][returned];
+    }
+    std::cout << '\n';
+    done_ = true;
+}
+
+// Runs inc, dec, mul or div on the variables of the current call.
+void Interpreter::calculate(const Statement& statement)
+{
+    int target = variableIndex(statement.arg1);
+    int* variables = variables_[depth_];
+    // The second argument is a variable or a number.
+    int operandVariable = variableIndex(statement.arg2);
+    int operand = operandVariable >= 0 ? variables[operandVariable]
+                                       : std::atoi(statement.arg2.c_str());
+
+    if (target < 0) {
+        return;
+    }
+    if (statement.type == "inc") {
+        variables[target] += operand;
+    } else if (statement.type == "dec") {
+        variables[target] -= operand;
+    } else if (statement.type == "mul") {
+        variables[target] *= operand;
+    } else if (statement.type == "div") {
+        variables[target] /= operand;
+    }
+}
+
+}  // namespace
+
+int main(int argc, char const* argv[])
+{
+    (void)argc;
+    Interpreter interpreter;
+    interpreter.load(argv[1]);
+    interpreter.run();
+    return 0;
 }
