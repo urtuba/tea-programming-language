@@ -117,7 +117,7 @@ I wrote Tea in 2019 as a data structures exercise at ITU. The topics were C++, t
 
 Every function call needs its own set of variables, and functions can call functions, so one set was not enough. My instructor set limits for the exercise, so I stored the variables in a fixed two-dimensional array, `T variables[LANGUAGE_DEPTH][5]`. Row 0 held the variables of `main`, row 1 those of a function called by `main`, and so on. `LANGUAGE_DEPTH` was 5, so a program could nest 4 calls below `main`. A program could also have at most 100 statements.
 
-In 2026 I replaced the fixed array with a growable call stack: a `std::vector` with one frame (five variables and the return address) for every active call. The statements are in a `std::vector` too. The only limit left is a call depth of 10000, because a recursive function never ends in a language without conditionals. I also added input checks with clear errors, stdin support, tests and CI. The code of 2019 is kept at the tag `original-2019`.
+In 2026 the fixed array was replaced with a growable call stack: a `std::vector` with one frame (five variables and the return address) for every active call. The statements are in a `std::vector` too. The only limit left is a call depth of 10000, because a recursive function never ends in a language without conditionals. Input checks with clear errors, stdin support, tests and CI were added too. The restoration was done with AI agents; each commit message names the model. The code of 2019 is kept at the tag `original-2019`.
 
 ## License
 

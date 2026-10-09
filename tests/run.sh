@@ -11,6 +11,8 @@
 #   NAME.out   expected stdout (required)
 #   NAME.code  expected exit status (default 0)
 #   NAME.err   expected stderr (checked only if the file exists)
+#   NAME.errtail  expected last lines of stderr, for runs whose full trace
+#              is too long to keep (checked only if the file exists)
 #
 # Every case that succeeds (exit status 0) and has no NAME.args is run a
 # second time with NAME.tea on standard input and no arguments. It must give
@@ -51,6 +53,14 @@ check() {
     if [ -f "$dir/$name.err" ] && ! cmp -s "$tmp/err" "$dir/$name.err"; then
         echo "  stderr differs"
         ok=0
+    fi
+    if [ -f "$dir/$name.errtail" ]; then
+        lines=$(wc -l < "$dir/$name.errtail")
+        tail -n "$lines" "$tmp/err" > "$tmp/errtail"
+        if ! cmp -s "$tmp/errtail" "$dir/$name.errtail"; then
+            echo "  end of stderr differs"
+            ok=0
+        fi
     fi
 
     if [ "$ok" -eq 1 ]; then
