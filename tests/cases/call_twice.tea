@@ -1,0 +1,9 @@
+function main
+inc a 1
+call helper a
+call helper a
+return a
+function helper
+inc b 10
+inc a b
+return a

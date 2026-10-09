@@ -1,0 +1,4 @@
+Executing inc at line 2
+Executing dec at line 3
+Executing div at line 4
+error: line 4: integer overflow

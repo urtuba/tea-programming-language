@@ -1,0 +1,23 @@
+function main
+inc a 1
+inc b 2
+inc c 3
+inc d 4
+inc e 5
+call helper a
+mul b 10
+mul c 10
+mul d 10
+mul e 10
+inc a b
+inc a c
+inc a d
+inc a e
+return a
+function helper
+inc b 7
+inc c 7
+inc d 7
+inc e 7
+mul a 2
+return a

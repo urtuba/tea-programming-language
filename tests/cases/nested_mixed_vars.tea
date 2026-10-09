@@ -1,0 +1,13 @@
+function main
+inc a 2
+inc b 3
+call f b
+return b
+function f
+inc c b
+call g c
+inc b c
+return b
+function g
+mul c 5
+return c

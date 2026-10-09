@@ -1,0 +1,15 @@
+function main
+inc a 1
+call f a
+return a
+function f
+mul a 2
+call g a
+return a
+function g
+inc a 5
+call h a
+return a
+function h
+mul a 10
+return a

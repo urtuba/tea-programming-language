@@ -1,0 +1,13 @@
+Executing inc at line 2
+Executing inc at line 3
+Executing call at line 4
+Executing inc at line 10
+Executing div at line 11
+Executing return at line 12
+Executing call at line 5
+Executing inc at line 14
+Executing dec at line 15
+Executing return at line 16
+Executing inc at line 6
+Executing inc at line 7
+Executing return at line 8
